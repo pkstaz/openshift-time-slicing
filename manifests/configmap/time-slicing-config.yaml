@@ -1,0 +1,29 @@
+---
+# ConfigMap para configurar time-slicing de GPUs NVIDIA
+# Este ConfigMap define cuántas réplicas lógicas se crearán por cada GPU física
+#
+# Configuración:
+#   - replicas: 2 → Cada GPU física se dividirá en 2 GPUs lógicas
+#   - renameByDefault: false → No renombra los recursos GPU
+#   - failRequestsGreaterThanOne: false → Permite que pods soliciten más de 1 GPU
+#
+# Uso:
+#   oc apply -f manifests/configmap/time-slicing-config.yaml
+#
+# Para cambiar el número de réplicas, modifica el valor de 'replicas' y vuelve a aplicar
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: time-slicing-config
+  namespace: nvidia-gpu-operator
+data:
+  any: |-
+    version: v1
+    sharing:
+      timeSlicing:
+        renameByDefault: false
+        failRequestsGreaterThanOne: false
+        resources:
+        - name: nvidia.com/gpu
+          replicas: 2

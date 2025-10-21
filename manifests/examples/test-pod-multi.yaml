@@ -1,0 +1,80 @@
+---
+# Múltiples pods de prueba para demostrar time-slicing
+# Estos pods compartirán la misma GPU física mediante time-slicing
+#
+# Uso:
+#   oc apply -f manifests/examples/test-pod-multi.yaml
+#
+# Verificar que ambos están corriendo:
+#   oc get pods -l app=gpu-test-multi
+#
+# Verificar GPU desde cada pod:
+#   oc exec -it gpu-test-pod-1 -- nvidia-smi
+#   oc exec -it gpu-test-pod-2 -- nvidia-smi
+#
+# Ambos pods deberían mostrar la misma GPU física
+#
+# Limpiar:
+#   oc delete -f manifests/examples/test-pod-multi.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-test-pod-1
+  labels:
+    app: gpu-test-multi
+    instance: pod-1
+spec:
+  restartPolicy: OnFailure
+  containers:
+  - name: cuda-container
+    image: nvidia/cuda:11.8.0-base-ubuntu22.04
+    command: 
+    - "bash"
+    - "-c"
+    - |
+      echo "==================================="
+      echo "GPU Test Pod 1 - Time-Slicing"
+      echo "==================================="
+      echo ""
+      nvidia-smi
+      echo ""
+      echo "Pod 1 is running and using GPU"
+      sleep infinity
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-test-pod-2
+  labels:
+    app: gpu-test-multi
+    instance: pod-2
+spec:
+  restartPolicy: OnFailure
+  containers:
+  - name: cuda-container
+    image: nvidia/cuda:11.8.0-base-ubuntu22.04
+    command: 
+    - "bash"
+    - "-c"
+    - |
+      echo "==================================="
+      echo "GPU Test Pod 2 - Time-Slicing"
+      echo "==================================="
+      echo ""
+      nvidia-smi
+      echo ""
+      echo "Pod 2 is running and using GPU"
+      sleep infinity
+    resources:
+      limits:
+        nvidia.com/gpu: 1
+      requests:
+        memory: "1Gi"
+        cpu: "500m"

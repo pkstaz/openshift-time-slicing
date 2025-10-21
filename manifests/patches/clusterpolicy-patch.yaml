@@ -1,0 +1,15 @@
+---
+# Patch para habilitar time-slicing en el NVIDIA GPU Operator
+# Este patch configura el device plugin para usar la configuración de time-slicing
+# definida en el ConfigMap 'time-slicing-config'
+#
+# Uso:
+#   oc patch clusterpolicy gpu-cluster-policy -n nvidia-gpu-operator \
+#     --type=merge \
+#     --patch-file manifests/patches/clusterpolicy-patch.yaml
+
+spec:
+  devicePlugin:
+    config:
+      name: time-slicing-config
+      default: any

@@ -1,0 +1,45 @@
+---
+# Pod de prueba individual para verificar acceso a GPU con time-slicing
+# Este pod ejecuta un contenedor CUDA básico que mantiene la sesión activa
+#
+# Uso:
+#   oc apply -f manifests/examples/test-pod-single.yaml
+#
+# Verificar:
+#   oc get pod gpu-test-pod
+#   oc exec -it gpu-test-pod -- nvidia-smi
+#
+# Limpiar:
+#   oc delete -f manifests/examples/test-pod-single.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-test-pod
+  labels:
+    app: gpu-test
+    test-type: single
+spec:
+  restartPolicy: OnFailure
+  containers:
+  - name: cuda-container
+    image: nvidia/cuda:11.8.0-base-ubuntu22.04
+    command: 
+    - "bash"
+    - "-c"
+    - |
+      echo "==================================="
+      echo "GPU Test Pod - Time-Slicing Demo"
+      echo "==================================="
+      echo ""
+      nvidia-smi
+      echo ""
+      echo "Pod is running. Use 'oc exec -it gpu-test-pod -- nvidia-smi' to verify GPU access"
+      echo "Sleeping indefinitely..."
+      sleep infinity
+    resources:
+      limits:
+        nvidia.com/gpu: 1  # Solicita 1 GPU (será una réplica lógica)
+      requests:
+        memory: "1Gi"
+        cpu: "500m"

@@ -1,0 +1,100 @@
+---
+# Ejemplo de Notebook para OpenShift AI usando GPU con time-slicing
+# Este ejemplo muestra cómo configurar un Notebook de Jupyter
+# para usar una GPU compartida mediante time-slicing
+#
+# Nota: Este es un ejemplo genérico. En OpenShift AI, normalmente crearías
+# el Notebook desde la interfaz web y seleccionarías el número de GPUs.
+# Este YAML es útil si necesitas crear Notebooks mediante GitOps o automation.
+#
+# Uso:
+#   oc apply -f manifests/examples/notebook-example.yaml -n <tu-proyecto>
+#
+# Verificar:
+#   oc get notebook -n <tu-proyecto>
+#   oc get pods -l notebook-name=pytorch-gpu-notebook -n <tu-proyecto>
+
+apiVersion: kubeflow.org/v1
+kind: Notebook
+metadata:
+  name: pytorch-gpu-notebook
+  labels:
+    app: pytorch-gpu-notebook
+    opendatahub.io/notebook-image: "true"
+spec:
+  template:
+    spec:
+      containers:
+      - name: pytorch-gpu-notebook
+        image: quay.io/opendatahub/notebooks:jupyter-datascience-ubi9-python-3.9-2023b
+        imagePullPolicy: Always
+        workingDir: /opt/app-root/src
+        env:
+        - name: NOTEBOOK_ARGS
+          value: |-
+            --ServerApp.port=8888
+            --ServerApp.token=''
+            --ServerApp.password=''
+            --ServerApp.base_url=/notebook/test-project/pytorch-gpu-notebook
+            --ServerApp.quit_button=False
+        ports:
+        - name: notebook-port
+          containerPort: 8888
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "2"
+            memory: "8Gi"
+            nvidia.com/gpu: "1"  # Solicita 1 GPU (será una réplica con time-slicing)
+          requests:
+            cpu: "1"
+            memory: "4Gi"
+            nvidia.com/gpu: "1"
+        livenessProbe:
+          httpGet:
+            path: /notebook/test-project/pytorch-gpu-notebook/api
+            port: notebook-port
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 1
+          successThreshold: 1
+          failureThreshold: 3
+        volumeMounts:
+        - name: notebook-data
+          mountPath: /opt/app-root/src
+      volumes:
+      - name: notebook-data
+        persistentVolumeClaim:
+          claimName: pytorch-notebook-pvc
+---
+# PVC para almacenar datos del Notebook
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pytorch-notebook-pvc
+  labels:
+    app: pytorch-gpu-notebook
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Service para acceder al Notebook
+apiVersion: v1
+kind: Service
+metadata:
+  name: pytorch-gpu-notebook
+  labels:
+    app: pytorch-gpu-notebook
+spec:
+  type: ClusterIP
+  ports:
+  - name: notebook-port
+    port: 8888
+    protocol: TCP
+    targetPort: 8888
+  selector:
+    notebook-name: pytorch-gpu-notebook
